@@ -252,7 +252,6 @@ function getRating(title, year, addArgs, callback) {
         return
     }
     $.get(getIMDBAPI(title, year), function(res){
-        console.log("GETRATING::", JSON.stringify(res))
         try {
           res = JSON.parse(res)
         } catch(e){
