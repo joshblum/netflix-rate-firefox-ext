@@ -3,6 +3,9 @@ netflix-rate
 
 Firefox extension that puts the IMDB and rotten tomato ratings on the Netflix webpage.
 
+Download directly from the <a href="https://addons.mozilla.org/en-us/firefox/addon/netflix-rate/" target="_blank">Mozilla Add-on Storee</a>.
+
+
 [Share this extension](http://netflix-rate.herokuapp.com)
 
 ## Screenshots:
