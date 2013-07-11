@@ -7,6 +7,8 @@ Download directly from the <a href="https://addons.mozilla.org/en-us/firefox/add
 
 <a href="http://netflix.burtonthird.com" target="_blank">Share this extension</a>.
 
+Netflix-rate is available under the [MIT license](http://opensource.org/licenses/MIT).
+
 ## Screenshots:
 
 ![alt text](http://netflix.burtonthird.com/static/img/screenshots/main-fresh.png "main fresh")
