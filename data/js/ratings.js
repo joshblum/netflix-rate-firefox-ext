@@ -16,7 +16,7 @@ var HOVER_SEL = {
         '.mdpLink' : getSideOrDVDTitle,
     };
 
-var CACHE_LIFE = 1000*60*60*24*7*2 //two weeks in milliseconds
+var CACHE_LIFE = 1000*60*60*24*7*2; //two weeks in milliseconds
 
 
 /////////// HELPERS /////////////
@@ -359,7 +359,7 @@ function displaySearch(args){
 
 /////////// HTML BUILDERS ////////////
 function getIMDBHtml(score, imdbID, title, klass) {
-    var html = $('<a class="rating-link" target="_blank" href="' + getIMDBLink(imdbID) + '"><div class="imdb imdb-icon star-box-giga-star" title="IMDB Rating"></div></a>');
+    var html = $('<a class="rating-link" target="_blank" href="' + escapeHTML(getIMDBLink(imdbID)) + '"><div class="imdb imdb-icon star-box-giga-star" title="IMDB Rating"></div></a>');
     if (score === null) {
         html.css('visibility', 'hidden');
     } else {
@@ -369,7 +369,7 @@ function getIMDBHtml(score, imdbID, title, klass) {
 }
 
 function getTomatoHtml(score, title, klass) {
-    var html = $('<a class="rating-link" target="_blank" href="' + getTomatoLink(title) + '"><span class="tomato tomato-wrapper" title="Rotten Tomato Rating"><span class="tomato-icon med"></span><span class="tomato-score"></span></span></a>');
+    var html = $('<a class="rating-link" target="_blank" href="' + escapeHTML(getTomatoLink(title)) + '"><span class="tomato tomato-wrapper" title="Rotten Tomato Rating"><span class="tomato-icon med"></span><span class="tomato-score"></span></span></a>');
     if (score === null) {
         html.css('visibility', 'hidden');
         return html
@@ -384,6 +384,20 @@ function getTomatoHtml(score, title, klass) {
     html.find('.tomato-score').append(score + '%');
     html.addClass(klass); //add custom class
     return html
+}
+
+/*
+    Helper function for escaping API urls
+*/
+function escapeHTML(str) {
+    return str.replace(/[&"<>]/g, function(m) {
+        return { 
+            "&": "&amp;",
+            '"': "&quot;",
+            "<": "&lt;",
+            ">": "&gt;",
+        }[m];
+    });
 }
 
 ///////// INIT /////////////
