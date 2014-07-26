@@ -6,33 +6,35 @@
 // plot  short, full     short or extended plot (short default)
 // callback  name (optional)     JSONP callback name
 // tomatoes  true (optional)     adds rotten tomatoes data
-var IMDB_API =  "http://www.omdbapi.com/?tomatoes=true";
+var IMDB_API = "http://www.omdbapi.com/?tomatoes=true";
 var TOMATO_LINK = "http://www.rottentomatoes.com/alias?type=imdbid&s=";
 var IMDB_LINK = "http://www.imdb.com/title/";
+var B3_LINK = "http://netflix.burtonthird.com/track";
 
 //popup movie selectors
 var HOVER_SEL = {
-        '.bobbable .popLink' : getWIMainTitle, //wi main display movies
-        '.mdpLink' : getSideOrDVDTitle,
-    };
+    '.bobbable .popLink': getWIMainTitle, //wi main display movies
+    '.mdpLink': getSideOrDVDTitle,
+};
 
-var CACHE_LIFE = 1000*60*60*24*7*2; //two weeks in milliseconds
-
+var CACHE_LIFE = 1000 * 60 * 60 * 24 * 7 * 2; //two weeks in milliseconds
+var UUID_KEY = "uuid";
+var DATE_KEY = "created_at";
 
 /////////// HELPERS /////////////
 /*
     Builds a select object where the selector is used to insert the ratings via the given insertFunc. Interval specifies the interval necessary for the popupDelay. imdb and rt classes are extra classes that can be added to a rating.
 */
-function selectObj(selector, insertFunc, interval, imdbClass, rtClass){
+function selectObj(selector, insertFunc, interval, imdbClass, rtClass) {
     imdbClass = imdbClass || '';
     rtClass = rtClass || '';
     return {
-        'selector' : selector,
-        'insertFunc' : insertFunc,
-        'interval' : interval,
-        'imdbClass' : imdbClass,
-        'rtClass' : rtClass,
-        }
+        'selector': selector,
+        'insertFunc': insertFunc,
+        'interval': interval,
+        'imdbClass': imdbClass,
+        'rtClass': rtClass,
+    };
 }
 
 /*
@@ -45,7 +47,7 @@ function getArgs() {
     if (url.indexOf(key) != -1) { // we are in dvds
         args = POPUP_INS_SEL[key];
         args.key = key;
-        return args
+        return args;
     }
 
     key = 'movies.netflix.com';
@@ -58,7 +60,7 @@ function getArgs() {
         args.key = 'Wi';
     }
 
-    return args
+    return args;
 }
 
 /*
@@ -73,44 +75,57 @@ function addCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID, year) {
 
     var date = new Date().getTime();
     var rating = {
-        'title' : title,
-        'imdb' : imdb,
-        'tomatoMeter' : tomatoMeter,
-        'tomatoUserMeter' : tomatoUserMeter,
-        'imdbID' : imdbID,
-        'year' : year,
-        'date' : date,
+        'title': title,
+        'imdb': imdb,
+        'tomatoMeter': tomatoMeter,
+        'tomatoUserMeter': tomatoUserMeter,
+        'imdbID': imdbID,
+        'year': year,
+        'date': date,
     };
-    
+
     CACHE[title] = JSON.stringify(rating);
-    self.port.emit("updateCache", {
-        'title' : title,
-        "rating" : rating,
-    });
-    return rating
+    updateCache(title);
+    return rating;
 }
 
 function checkCache(title) {
-    if(!(title in CACHE)) {
+    if (!(title in CACHE)) {
         return {
-            'inCache' : false,
-            'cachedVal' : null,
-        }
+            'inCache': false,
+            'cachedVal': null,
+        };
     }
 
     var cachedVal = JSON.parse(CACHE[title]);
     var inCache = false;
-    if (cachedVal !== undefined && cachedVal.tomatoMeter !== undefined && cachedVal.year !== null){
-        var now = new Date().getTime();
-        var lifetime = now - cachedVal.date;
-        if(lifetime <= CACHE_LIFE) {
-            inCache = true;
-        }
+    if (cachedVal !== undefined && cachedVal.tomatoMeter !== undefined && cachedVal.year !== null) {
+        inCache = validCacheEntry(cachedVal.date);
     }
     return {
-        'inCache' : inCache,
-        'cachedVal' : cachedVal,
-    }
+        'inCache': inCache,
+        'cachedVal': cachedVal,
+    };
+}
+
+/*
+ * returns whether a date exceeds the CACHE_LIFE
+ */
+function isValidCacheEntry(date) {
+    var now = new Date().getTime();
+    var lifetime = now - date;
+    return lifetime <= CACHE_LIFE;
+}
+
+/*
+ * update the external cache.
+ */
+function updateCache(key, value) {
+    value = value || CACHE[key];
+    self.port.emit("updateCache", {
+        'key': key,
+        'value': value,
+    });
 }
 
 /*
@@ -120,22 +135,22 @@ function getWrappedTitle(e, key, regex) {
     var title = $(e.target).attr('alt');
     if (title === undefined) {
         var url = $(e.target).context.href;
-        if (typeof url === "undefined"){
-            return ""
+        if (typeof url === "undefined") {
+            return "";
         }
         url = url.split('/');
-        var title = url[url.indexOf(key) + 1];
+        title = url[url.indexOf(key) + 1];
         title = title.replace(regex, ' ');
     }
-    return title
+    return title;
 }
 
 /*
     Clear old ratings and unused content. Differs for different popups
 */
-function clearOld(args){
+function clearOld(args) {
     var $target = $('#BobMovie');
-    if (args.key in POPUP_INS_SEL['movies.netflix.com']){
+    if (args.key in POPUP_INS_SEL['movies.netflix.com']) {
         $target.find('.label').contents().remove();
     }
     $target.find('.rating-link').remove();
@@ -156,24 +171,102 @@ function getIMDBAPI(title, year) {
     if (year !== null) {
         url += '&y=' + year;
     }
-    return url
+    return url;
 }
 
 /*
     Build the url for the imdbLink
 */
 function getIMDBLink(title) {
-    return IMDB_LINK + title
+    return IMDB_LINK + title;
 }
 
 /*
     Build the url for the rtLink
 */
 function getTomatoLink(imdbID) {
-    imdbID = imdbID.slice(2) //convert tt123456 -> 123456
-    return TOMATO_LINK + imdbID
+    imdbID = imdbID.slice(2); //convert tt123456 -> 123456
+    return TOMATO_LINK + imdbID;
 }
 
+/*
+ * Build the url for the user counting
+ */
+function getB3Link() {
+    return B3_LINK;
+}
+
+///////////////// USER COUNT ////////////////
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-3xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function hasUUID() {
+    return UUID_KEY in CACHE && DATE_KEY in CACHE;
+}
+
+/*
+ * Checks if the uuid is older than CACHE_LIFE
+ */
+function uuidIsExpired() {
+    var date = CACHE[DATE_KEY];
+    if (date === undefined) {
+        return true;
+    }
+    date = Date.parse(date); // convert to ms
+    return !isValidCacheEntry(date);
+}
+
+function setUUID() {
+    if (!(UUID_KEY in CACHE)) {
+        CACHE[UUID_KEY] = generateUUID();
+        updateCache(UUID_KEY);
+    }
+    setUUIDDate();
+}
+
+function setUUIDDate() {
+    CACHE[DATE_KEY] = new Date(); // just a string, must be parsed for cmp
+    updateCache(DATE_KEY);
+}
+
+function getUUID() {
+    if (!hasUUID()) {
+        setUUID();
+    } else if (uuidIsExpired()) {
+        setUUIDDate();
+    }
+    return CACHE[UUID_KEY];
+}
+
+function clearUUIDCache() {
+    delete CACHE[UUID_KEY];
+    delete CACHE[DATE_KEY];
+}
+
+function getSrc() {
+    return "chrome";
+}
+
+function countUser() {
+    if (hasUUID() && !uuidIsExpired()) {
+        return;
+    }
+    $.post(getB3Link(), {
+        'uuid': getUUID(),
+        'src': getSrc(),
+    }, function(res) {
+        if (!res.success) {
+            clearUUIDCache();
+        }
+    }).fail(function(res) {
+        clearUUIDCache();
+    });
+}
 
 
 ///////////////// TITLE PARSERS ////////////////
@@ -192,7 +285,7 @@ function getRecentTitle(title) {
     if (index !== -1) {
         title = title.slice(0, index);
     }
-    return title
+    return title;
 }
 
 /*
@@ -201,49 +294,49 @@ function getRecentTitle(title) {
 function getSideOrDVDTitle(e) {
     var url = document.location.href;
     if (url.indexOf('Search') != -1) { //no popups on search page.
-        return $(e.target).text() // but still cache the title
+        return $(e.target).text(); // but still cache the title
     }
 
     var key = 'dvd.netflix.com';
     if (url.indexOf(key) != -1) { // we are in dvds now
-        return getDVDTitle(e)
-    } 
-    return getSideTitle(e)
+        return getDVDTitle(e);
+    }
+    return getSideTitle(e);
 }
 
 function getSideTitle(e) {
     var key = "WiMovie";
     var regex = /_/g;
-    return getWrappedTitle(e, key,regex)
+    return getWrappedTitle(e, key, regex);
 }
 
 function getDVDTitle(e) {
     var key = "Movie";
     var regex = /-/g;
-    return getWrappedTitle(e, key,regex)
+    return getWrappedTitle(e, key, regex);
 }
 
 function parseYear($target) {
-    var $target = $target || $('.year');
+    $target = $target || $('.year');
     var year = null;
     if ($target.length) {
         year = $target.text().split('-')[0];
     }
-    return year
+    return year;
 }
 
 /*
     Parse the search title for a given search result
 */
-function parseSearchTitle($target){
+function parseSearchTitle($target) {
     return $target.find('.title').children().text();
 }
 
 /////////// RATING HANDLERS ////////////
-function eventHandler(e){
+function eventHandler(e) {
     var title = e.data(e); //title parse funtion
-    if ($('.label').contents() != '') { //the popup isn't already up
-        getRating(title, null, null, function(rating){ //null year, null addArgs
+    if ($('.label').contents() !== '') { //the popup isn't already up
+        getRating(title, null, null, function(rating) { //null year, null addArgs
             showRating(rating, getArgs());
         });
     }
@@ -254,22 +347,22 @@ function eventHandler(e){
 */
 function getRating(title, year, addArgs, callback) {
     var cached = checkCache(title);
-    if (cached.inCache){
+    if (cached.inCache) {
         callback(cached.cachedVal, addArgs);
-        return
+        return;
     }
-    $.get(getIMDBAPI(title, year), function(res){
+    $.get(getIMDBAPI(title, year), function(res) {
         try {
-          res = JSON.parse(res);
-        } catch(e){
-          res = {
-                'Response' : 'False',
+            res = JSON.parse(res);
+        } catch (e) {
+            res = {
+                'Response': 'False',
             };
         }
-        
-        if (res.Response === 'False'){
+
+        if (res.Response === 'False') {
             addCache(title);
-            return null
+            return null;
         }
         var imdbScore = parseFloat(res.imdbRating);
         var tomatoMeter = getTomatoScore(res, "tomatoMeter");
@@ -283,7 +376,7 @@ function getRating(title, year, addArgs, callback) {
     parse tomato rating from api response object
 */
 function getTomatoScore(res, meterType) {
-    return res[meterType] === "N/A" ? null : parseInt(res[meterType])
+    return res[meterType] === "N/A" ? null : parseInt(res[meterType]);
 }
 
 /*
@@ -291,11 +384,11 @@ function getTomatoScore(res, meterType) {
 */
 function showRating(rating, args) {
     if (!args.interval) { // unknown popup
-        return
+        return;
     }
-    var checkVisible = setInterval(function(){
+    var checkVisible = setInterval(function() {
         var $target = $(args.selector);
-        if($target.length){
+        if ($target.length) {
             clearInterval(checkVisible);
             updateCache(rating.title); //run the query with the year to update
             clearOld(args);
@@ -311,7 +404,7 @@ function updateCache(title) {
     var cachedVal = checkCache(title).cachedVal;
     if (cachedVal.year === null) {
         var year = parseYear();
-        getRating(title, year, null, function(rating){
+        getRating(title, year, null, function(rating) {
             showRating(rating, getArgs());
         });
     }
@@ -344,26 +437,26 @@ function searchSetup() {
         args.selectorClass = ".agMovie";
     }
     if (args === undefined) {
-        return
+        return;
     }
-    return displaySearch(args)
+    return displaySearch(args);
 }
 
 /*
     Find ratings for all of the movies found by the search and display them
 */
-function displaySearch(args){
+function displaySearch(args) {
 
     var selector = args.selector;
-    $.each($(args.selectorClass), function(index, target){ // iterate over movies found
+    $.each($(args.selectorClass), function(index, target) { // iterate over movies found
         var $target = $(target);
         var year = parseYear($target.find('.year'));
         var title = parseSearchTitle($target);
         var addArgs = {
-            'target' : $target,
-            'selector' : selector,
+            'target': $target,
+            'selector': selector,
         }; // add the current target so the rating matches the movie found
-        getRating(title, year, addArgs, function(rating, addArgs){
+        getRating(title, year, addArgs, function(rating, addArgs) {
             args.selector = addArgs.target.find(addArgs.selector); // store selector to show rating on.
 
             displayRating(rating, args);
@@ -381,23 +474,23 @@ function getIMDBHtml(rating, klass) {
     } else {
         html.find('.imdb').addClass(klass).append(score.toFixed(1));
     }
-    return html
+    return html;
 }
 
 function getTomatoHtml(rating, klass) {
     var html = $('<a class="rating-link" target="_blank" href="' + escapeHTML(getTomatoLink(rating.imdbID)) + '"><span class="tomato tomato-wrapper" title="Rotten Tomato Rating"><span class="rt-icon tomato-icon med"></span><span class="rt-score tomato-score"></span><span class="rt-icon audience-icon med"></span><span class="rt-score audience-score"></span></span></a>');
     if (!rating.tomatoMeter || !rating.tomatoUserMeter) {
         html.css('visibility', 'hidden');
-        return html
+        return html;
     }
 
     html.find('.tomato-icon').addClass(getTomatoClass(rating.tomatoMeter)).addClass(klass);
-    html.find('.tomato-score').append(rating.tomatoMeter + '%');    
+    html.find('.tomato-score').append(rating.tomatoMeter + '%');
 
     html.find('.audience-icon').addClass(getTomatoClass(rating.tomatoUserMeter)).addClass(klass);
     html.find('.audience-score').append(rating.tomatoUserMeter + '%');
 
-    return html
+    return html;
 }
 
 /*
@@ -405,7 +498,7 @@ function getTomatoHtml(rating, klass) {
 */
 function escapeHTML(str) {
     return str.replace(/[&"<>]/g, function(m) {
-        return { 
+        return {
             "&": "&amp;",
             '"': "&quot;",
             "<": "&lt;",
@@ -416,30 +509,30 @@ function escapeHTML(str) {
 
 ///////// INIT /////////////
 self.port.on("pageMod", function(data) {
-    
-    CACHE = data.CACHE
+    CACHE = data.CACHE;
+    countUser();
     //common select objects
     var dvdSelObj = selectObj('.bobMovieRatings', 'append', 800, 'dvd-popup', 'dvd-rt-icon');
     var WiObj = selectObj('.midBob', 'append', 800);
 
     //poup select types
     POPUP_INS_SEL = {
-        'movies.netflix.com' : {
+        'movies.netflix.com': {
             'Wi': WiObj, // main page selector
-            'Queue' : selectObj('.info', 'before', 800, 'queue-icon'), // queue page selector
+            'Queue': selectObj('.info', 'before', 800, 'queue-icon'), // queue page selector
         },
-        'dvd.netflix.com' : dvdSelObj, // dvdqueue page selector
+        'dvd.netflix.com': dvdSelObj, // dvdqueue page selector
     };
 
     //search select types
     SEARCH_SEL = {
         //search page selectors
-        'Search' : selectObj('.bluray', 'append', -1, 'dvd-search-page', 'search-rt-icon'),
-        'WiSearch' : selectObj('.actions', 'append', -1, 'wi-search-page', 'search-rt-icon'),
+        'Search': selectObj('.bluray', 'append', -1, 'dvd-search-page', 'search-rt-icon'),
+        'WiSearch': selectObj('.actions', 'append', -1, 'wi-search-page', 'search-rt-icon'),
     };
     searchSetup(); // check if this is a search page
 
-    $.each(HOVER_SEL, function(selector, parser){ //add listeners for each hover selector
+    $.each(HOVER_SEL, function(selector, parser) { //add listeners for each hover selector
         $(document).on('mouseenter', selector, parser, eventHandler);
     });
 });
