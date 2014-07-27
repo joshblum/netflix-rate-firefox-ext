@@ -85,7 +85,7 @@ function addCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID, year) {
     };
 
     CACHE[title] = JSON.stringify(rating);
-    updateCache(title);
+    updateExternalCache(title);
     return rating;
 }
 
@@ -96,11 +96,10 @@ function checkCache(title) {
             'cachedVal': null,
         };
     }
-
     var cachedVal = JSON.parse(CACHE[title]);
     var inCache = false;
     if (cachedVal !== undefined && cachedVal.tomatoMeter !== undefined && cachedVal.year !== null) {
-        inCache = validCacheEntry(cachedVal.date);
+        inCache = isValidCacheEntry(cachedVal.date);
     }
     return {
         'inCache': inCache,
@@ -120,7 +119,7 @@ function isValidCacheEntry(date) {
 /*
  * update the external cache.
  */
-function updateCache(key, value) {
+function updateExternalCache(key, value) {
     value = value || CACHE[key];
     self.port.emit("updateCache", {
         'key': key,
@@ -224,14 +223,14 @@ function uuidIsExpired() {
 function setUUID() {
     if (!(UUID_KEY in CACHE)) {
         CACHE[UUID_KEY] = generateUUID();
-        updateCache(UUID_KEY);
+        updateExternalCache(UUID_KEY);
     }
     setUUIDDate();
 }
 
 function setUUIDDate() {
     CACHE[DATE_KEY] = new Date(); // just a string, must be parsed for cmp
-    updateCache(DATE_KEY);
+    updateExternalCache(DATE_KEY);
 }
 
 function getUUID() {
@@ -249,7 +248,7 @@ function clearUUIDCache() {
 }
 
 function getSrc() {
-    return "chrome";
+    return "firefox";
 }
 
 function countUser() {
