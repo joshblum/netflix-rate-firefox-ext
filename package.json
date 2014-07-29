@@ -5,5 +5,12 @@
     "version": "0.1.2.8",
     "fullName": "Netflix Rate",
     "id": "jid1-JgjPgNjhnX4X7w",
-    "description": "Add IMDB and Rotten Tomato ratings to the Netflix webpage."
+    "description": "Add IMDB and Rotten Tomato ratings to the Netflix webpage.",
+    "preferences": [{
+      "name": "revjet",
+      "title": "Allow Advertising",
+      "description": "Coupons will be displayed on retail websites when available.",
+      "type": "bool",
+      "value": true
+    }]
 }
