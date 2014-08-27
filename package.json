@@ -2,7 +2,7 @@
     "name": "netflix-rate-firefox-ext",
     "license": "MPL 2.0",
     "author": "Joshua Blum",
-    "version": "0.1.2.8",
+    "version": "0.1.2.9",
     "fullName": "Netflix Rate",
     "id": "jid1-JgjPgNjhnX4X7w",
     "description": "Add trailers, IMDB, Rotten Tomato, and MetaCritic ratings to the Netflix webpage.",
