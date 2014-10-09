@@ -243,10 +243,8 @@ function clearOld(type, args) {
     if (type === 'rating') {
         $target.find('.rating-link').remove();
         $target.find('.label').remove();
-        $target.find('.ratingPredictor').css({
-          'visibility': 'hidden',
-          'margin-left': '-20px',
-        });
+        $target.find('.ratingPredictor').remove();
+        $target.find('.bobMovieActions').remove();
     } else if (type === 'trailer') {
         $target.find('.trailer-label').remove();
     }
@@ -904,7 +902,7 @@ function setupDvdPopupHandler() {
 /////////// HTML BUILDERS ////////////
 function getIMDBHtml(rating, klass) {
     var score = rating.imdb;
-    var html = $('<a class="rating-link rating-link-imdb" target="_blank" href="' + escapeHTML(getIMDBLink(rating.imdbID)) + '"><div class="imdb imdb-icon star-box-giga-star" title="IMDB Rating"></div></a>');
+    var html = $('<a class="rating-link" target="_blank" href="' + escapeHTML(getIMDBLink(rating.imdbID)) + '"><div class="imdb imdb-icon star-box-giga-star" title="IMDB Rating"></div></a>');
     if (!score) {
         html.css('visibility', 'hidden');
     } else {
@@ -917,7 +915,7 @@ function getTomatoHtml(rating, klass) {
     if (!rating.tomatoMeter) {
         return '<span class="rating-link tomato-filler"></span>';
     }
-    var html = $('<a class="rating-link rating-link-tomato" target="_blank" href="' + escapeHTML(getTomatoLink(rating.imdbID)) + '"><span class="tomato tomato-wrapper" title="Rotten Tomato Rating"><span class="rt-icon tomato-icon med"></span><span class="rt-score tomato-score"></span></span></a>');
+    var html = $('<a class="rating-link" target="_blank" href="' + escapeHTML(getTomatoLink(rating.imdbID)) + '"><span class="tomato tomato-wrapper" title="Rotten Tomato Rating"><span class="rt-icon tomato-icon med"></span><span class="rt-score tomato-score"></span></span></a>');
 
     html.find('.tomato-icon').addClass(getTomatoClass(rating.tomatoMeter)).addClass(klass);
     html.find('.tomato-score').append(rating.tomatoMeter + '%');

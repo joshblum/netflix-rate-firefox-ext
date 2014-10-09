@@ -43,7 +43,7 @@
 }
 
 .tomato-filler {
-  margin-left: -45px;
+  margin-left: 10px;
 }
 
 .tomato-icon.med.rotten {
@@ -93,12 +93,8 @@
   font-weight: normal;
 }
 
-.rating-link-tomato {
-  margin-left: -45px;
-}
-
-.rating-link-imdb {
-  margin-left: 67px;
+.bobMovieRatings {
+  margin-right: 78px;
 }
 
 .dvd-popup {
