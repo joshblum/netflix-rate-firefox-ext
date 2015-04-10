@@ -16,8 +16,3 @@ Netflix-rate is available under the [MIT license](http://opensource.org/licenses
 ![alt text](http://netflix.burtonthird.com/static/img/screenshots/dvd-popup.png "dvd popup")
 ![alt text](http://netflix.burtonthird.com/static/img/screenshots/dvd-search.png "dvd search")
 
-## Author
-
-**Josh Blum**
-+ [joshblum@mit.edu](mailto:joshblum@mit.edu)
-+ [@blumua](https://twitter.com/blumua)

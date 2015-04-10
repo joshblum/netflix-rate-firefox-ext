@@ -1,5 +1,10 @@
-.PHONY: lint
+.PHONY: lint extension run
 
 lint:
-	jshint data/js/ratings.js
+	-jshint -c .jshintrc --exclude-path .jshintignore .
 
+extension: lint
+	cfx xpi
+
+run:
+	cfx run
