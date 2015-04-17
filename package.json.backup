@@ -1,8 +1,0 @@
-{
-  "name": "netflix-rate-firefox-ext",
-  "fullName": "Netflix Rate",
-  "description": "Add IMDB and Rotten Tomato ratings to the Netflix webpage.",
-  "author": "Joshua Blum",
-  "license": "MPL 2.0",
-  "version": "0.1"
-}

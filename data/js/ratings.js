@@ -29,6 +29,7 @@ var PREFETCH_SEL = {
 var CACHE_LIFE = 1000 * 60 * 60 * 24 * 7 * 2; //two weeks in milliseconds
 var UUID_KEY = "uuid";
 var DATE_KEY = "created_at";
+var CACHE;
 
 /////////// HELPERS /////////////
 
@@ -1066,6 +1067,7 @@ var MOVIE_SEL = {
         "trailerClass": "dvd-trailer-label",
     }),
 };
+
 
 ///////// INIT /////////////
 self.port.on("pageMod", function(data) {
