@@ -2,12 +2,13 @@
 
 var TMDB_API_KEY = "04a87a053afac639272eefbb94a173e4";
 var MASHAPE_API_KEY = "o8ExDmFGA5mshpeqIsuOzl2MVcpUp10vM6njsnscSkr7IMivH4";
+var TOMATO_API_KEY = "85jwjhunznmwuwas9qfvdwhf";
 
 var IMDB_API = "http://www.omdbapi.com/?tomatoes=true";
 var TMDB_API = "http://api.themoviedb.org/3";
 var MASHAPE_API = "https://byroredux-metacritic.p.mashape.com/search/movie";
+var TOMATO_API = "http://api.rottentomatoes.com/api/public/v1.0/movie_alias.json?apikey=" + TOMATO_API_KEY + "&type=imdb&id=";
 
-var TOMATO_LINK = "http://www.rottentomatoes.com/alias?type=imdbid&s=";
 var IMDB_LINK = "http://www.imdb.com/title/";
 var B3_LINK = "http://netflix.burtonthird.com/count";
 var YOUTUBE_TRAILER_LINK = "https://www.youtube.com/watch?v=";
@@ -53,6 +54,7 @@ function makeSelectObject(selector, insertFunc, interval, klassDict) {
     klassDict = klassDict || {};
 
     return merge({
+        "containerKlass": "nr-popup-rating-container",
         "selector": selector,
         "insertFunc": insertFunc,
         "interval": interval,
@@ -105,7 +107,7 @@ function getTrailerDvdArgs(args, url) {
 /*
     Add rating to the cache
 */
-function addCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID,
+function addRatingCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID,
     metacriticScore, metacriticUrl, year, type) {
     imdb = imdb || null;
     tomatoMeter = tomatoMeter || null;
@@ -116,8 +118,7 @@ function addCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID,
     year = year || null;
     type = type || null;
 
-    var date = new Date().getTime();
-    var rating = {
+    return addCache(title, {
         "title": title,
         "imdb": imdb,
         "tomatoMeter": tomatoMeter,
@@ -126,12 +127,8 @@ function addCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID,
         "metacriticScore": metacriticScore,
         "metacriticUrl": metacriticUrl,
         "year": year,
-        "date": date,
         "type": type,
-    };
-
-    CACHE[title] = JSON.stringify(rating);
-    return rating;
+    }, true);
 }
 
 /*
@@ -139,44 +136,34 @@ function addCache(title, imdb, tomatoMeter, tomatoUserMeter, imdbID,
  */
 function addTrailerCache(title, trailerId) {
     trailerId = trailerId || null;
-    var cachedVal = JSON.parse(CACHE[title]);
-
-    if (cachedVal === undefined) {
-        cachedVal = {
-            "title": title,
-            "trailerId": trailerId,
-        };
-    } else {
-        cachedVal.trailerId = trailerId;
-    }
-
-    CACHE.date = new Date().getTime();
-    CACHE[title] = JSON.stringify(cachedVal);
-    return cachedVal;
+    return addCache(title, {
+        "title": title,
+        "trailerId": trailerId,
+    });
 }
 
 /*
- * Add metacritic score to cache
+ * Add rotten tomato alias to cache
  */
-function addMetacriticCache(title, metacriticScore, metacriticUrl) {
-    metacriticScore = metacriticScore || null;
-    metacriticUrl = metacriticUrl || null;
+function addTomatoAliasCache(title, tomatoAliasUrl) {
+    tomatoAliasUrl = tomatoAliasUrl || null;
 
-    var cachedVal = JSON.parse(CACHE[title]);
+    return addCache(title, {
+        "tomatoAliasUrl": tomatoAliasUrl,
+    });
+}
 
-    if (cachedVal === undefined) {
-        cachedVal = {
-            "title": title,
-            "metacriticScore": metacriticScore,
-            "metacriticUrl": metacriticUrl,
-        };
+function addCache(key, values, forceWrite) {
+    var cachedVal;
+    if (key in CACHE && !forceWrite) {
+        cachedVal = JSON.parse(CACHE[key]);
+        merge(cachedVal, values);
     } else {
-        cachedVal.metacriticScore = metacriticScore;
-        cachedVal.metacriticUrl = metacriticUrl;
+        cachedVal = values;
     }
 
-    CACHE.date = new Date().getTime();
-    CACHE[title] = JSON.stringify(cachedVal);
+    cachedVal.date = new Date().getTime();
+    CACHE[key] = JSON.stringify(cachedVal);
     return cachedVal;
 }
 
@@ -214,15 +201,16 @@ function isValidCacheEntry(date) {
  * update the external cache.
  */
 function updateExternalCache(key, value) {
-        value = value || CACHE[key];
-        self.port.emit("updateCache", {
-            "key": key,
-            "value": value,
-        });
-    }
-    /*
-     * Helper to generalize the parser for side titles and DVD titles
-     */
+    value = value || CACHE[key];
+    self.port.emit("updateCache", {
+        "key": key,
+        "value": value,
+    });
+}
+
+/*
+ * Helper to generalize the parser for side titles and DVD titles
+ */
 function getWrappedTitle(e, key, regex) {
     var title = $(e.target).attr("alt");
     if (title === undefined) {
@@ -243,13 +231,13 @@ function getWrappedTitle(e, key, regex) {
 function clearOld(type, args) {
     var $target = $("#BobMovie");
     if (args.key in POPUP_INS_SEL[type]["movies.netflix.com"]) {
-        $target.find("p.label").contents().remove();
+        $target.find("p.nr-label").contents().remove();
     }
     if (type === "rating") {
         $target.find(".rating-link").remove();
-        $target.find(".label").remove();
+        $target.find(".nr-label").remove();
         $target.find(".ratingPredictor").remove();
-        $target.find(".bobMovieActions").remove();
+        $target.find("." + args.containerKlass).remove();
     } else if (type === "trailer") {
         $target.find(".trailer-label").remove();
     }
@@ -291,12 +279,32 @@ function getIMDBLink(title) {
     return IMDB_LINK + title;
 }
 
+function getTomatoAPILink(imdbId) {
+    return TOMATO_API + imdbId;
+}
+
 /*
     Build the url for the rtLink
 */
-function getTomatoLink(imdbID) {
-    imdbID = imdbID.slice(2); //convert tt123456 -> 123456
-    return TOMATO_LINK + imdbID;
+function getTomatoLink(rating, callback) {
+    if (!rating.imdbID) {
+        callback(rating);
+    }
+    var imdbID = rating.imdbID.slice(2); //convert tt123456 -> 123456
+    var cached = checkCache(rating.title);
+    if (cached.inCache && cached.cachedVal.tomatoAliasUrl !== undefined) {
+        return cached.cachedVal.tomatoAliasUrl;
+    } else {
+        $.get(getTomatoAPILink(imdbID), function(res) {
+            var tomatoAliasUrl = null;
+            if (res.error === undefined) {
+                tomatoAliasUrl = res.links.alternate;
+            }
+            rating = addTomatoAliasCache(rating.title, tomatoAliasUrl);
+            callback(rating);
+        }, "json");
+    }
+    return null;
 }
 
 /*
@@ -367,6 +375,18 @@ function getMashapeAPIUrl() {
     return MASHAPE_API;
 }
 
+function getMashapePostData(title, year) {
+    var data = {
+        "title": title
+    };
+
+    if (year !== null) {
+        data.year_from = year;
+        data.year_to = parseInt(year) + 1;
+    }
+
+    return data;
+}
 
 ///////////////// USER COUNT ////////////////
 function generateUUID() {
@@ -550,10 +570,12 @@ function prefetchChunkProcessor($slice, parser) {
 
 function popupHandler(e) {
     var title = e.data(e); //title parse funtion
-    if ($(".label").contents() !== "") { //the popup isn't already up
+    if ($(".nr-label").contents() !== "") { //the popup isn't already up
         //null year, null addArgs
         getRating(title, null, null, function(rating) {
-            showPopupRating(rating, getRatingArgs());
+            getTomatoLink(rating, function(rating) {
+                showPopupRating(rating, getRatingArgs());
+            });
         });
 
         getTrailer(title, null, null, function(trailer) {
@@ -643,46 +665,26 @@ function getRating(title, year, addArgs, callback) {
         }
         return;
     }
-    addCache(title);
+    addRatingCache(title);
     var omdbRes = {
         "Response": "False",
     };
     var metaRes = {
         "result": false,
     };
-    $.get(getIMDBAPI(title, year), function(res) {
-        omdbRes = parseAPIResponse(res, {
-            "Response": "False",
-        });
-
+    $.get(getIMDBAPI(title, year), function(omdbRes) {
         $.ajax({
             "type": "POST",
             "url": getMashapeAPIUrl(),
-            "data": {
-                "title": title
-            },
+            "data": getMashapePostData(title, year),
             "headers": {
                 "X-Mashape-Key": MASHAPE_API_KEY
             },
-            "success": function(res) {
-                //search based on year and convert to single result
-                metaRes = res;
-                if (metaRes.count === 0) {
-                    metaRes = {
-                        "result": false,
-                    };
-                } else {
-                    var metaYear;
-                    for (var i = 0; i < metaRes.count; i++) {
-                        res = metaRes.results[i];
-                        metaYear = res.rlsdate.split("-")[0];
-                        if (year === parseInt(metaYear)) {
-                            metaRes = res;
-                            break;
-                        }
-                    }
-                    if (year === null || metaRes.max_pages !== undefined) {
-                        metaRes = metaRes.results[0];
+            "success": function(mashapeRes) {
+                for (var i = 0; i < mashapeRes.count; i++) {
+                    if (title === mashapeRes.results[i].name) {
+                        metaRes = mashapeRes.results[i];
+                        break;
                     }
                 }
             },
@@ -695,7 +697,7 @@ function getRating(title, year, addArgs, callback) {
 function processRatingResponses(title, year, omdbRes, metaRes, callback, addArgs) {
     // both apis failed
     if (omdbRes.Response === "False" && metaRes.result === false) {
-        addCache(title);
+        addRatingCache(title);
         return null;
     }
     var imdbScore = parseFloat(omdbRes.imdbRating);
@@ -703,7 +705,7 @@ function processRatingResponses(title, year, omdbRes, metaRes, callback, addArgs
     var tomatoUserMeter = getTomatoScore(omdbRes, "tomatoUserMeter");
     var metacriticScore = parseInt(metaRes.score);
     var metacriticUrl = metaRes.url;
-    var rating = addCache(title, imdbScore, tomatoMeter, tomatoUserMeter,
+    var rating = addRatingCache(title, imdbScore, tomatoMeter, tomatoUserMeter,
         omdbRes.imdbID, metacriticScore, metacriticUrl, year, omdbRes.Type);
     if (callback) {
         callback(rating, addArgs);
@@ -774,13 +776,19 @@ function updateCache(title) {
  * Build and display the ratings
  */
 function displayRating(rating, args) {
-    var imdbHtml = getIMDBHtml(rating, args.imdbClass);
-    var tomatoHtml = getTomatoHtml(rating, args.rtClass);
-    var metaHtml = getMetatcriticHtml(rating, args.metacriticClass);
+    var $imdbHtml = getIMDBHtml(rating, args.imdbClass);
+    var $tomatoHtml = getTomatoHtml(rating, args.rtClass);
+    var $metaHtml = getMetatcriticHtml(rating, args.metacriticClass);
+
+    var $container = $("<div>", {
+        "class": args.containerKlass,
+    });
+    $container.append($imdbHtml);
+    $container.append($tomatoHtml);
+    $container.append($metaHtml);
+
     var $target = $(args.selector);
-    $target[args.insertFunc](imdbHtml);
-    $target[args.insertFunc](tomatoHtml);
-    $target[args.insertFunc](metaHtml);
+    $target[args.insertFunc]($container);
 }
 
 /*
@@ -869,7 +877,9 @@ function displaySearch() {
         getRating(title, year, addArgs, function(rating, addArgs) {
             var selectObject = deepCopy(SEARCH_SEL.rating);
             selectObject.selector = addArgs.target.find(ratingSelector); // store selector to show rating
-            displayRating(rating, selectObject);
+            getTomatoLink(rating, function(rating) {
+                displayRating(rating, selectObject);
+            });
         });
 
         getTrailer(title, year, addArgs, function(trailer, addArgs) {
@@ -899,7 +909,9 @@ function displayMovie() {
     getRating(title, year, addArgs, function(rating, addArgs) {
         var selectObject = deepCopy(MOVIE_SEL.rating);
         selectObject.selector = $target.find(MOVIE_SEL.rating.selector);
-        displayRating(rating, selectObject);
+        getTomatoLink(rating, function(rating) {
+            displayRating(rating, selectObject);
+        });
     });
 
     getTrailer(title, year, addArgs, function(trailer, addArgs) {
@@ -941,7 +953,7 @@ function getTomatoHtml(rating, klass) {
     if (!rating.tomatoMeter) {
         return "<span class='rating-link tomato-filler'></span>";
     }
-    var html = $("<a class='rating-link' target='_blank' href='" + escapeHTML(getTomatoLink(rating.imdbID)) + "'><span class='tomato tomato-wrapper' title='Rotten Tomato Rating'><span class='rt-icon tomato-icon med'></span><span class='rt-score tomato-score'></span></span></a>");
+    var html = $("<a class='rating-link' target='_blank' href='" + escapeHTML(rating.tomatoAliasUrl) + "'><span class='tomato tomato-wrapper' title='Rotten Tomato Rating'><span class='rt-icon tomato-icon med'></span><span class='rt-score tomato-score'></span></span></a>");
 
     html.find(".tomato-icon").addClass(getTomatoClass(rating.tomatoMeter)).addClass(klass);
     html.find(".tomato-score").append(rating.tomatoMeter + "%");
@@ -964,7 +976,7 @@ function getTrailerLabelHtml(trailerId, klass) {
     }
     klass = klass || "";
     var html = $("<a target='_blank' id='" + trailerId + "' class='" + klass + " trailer-label' href='" + getYouTubeTrailerLink(trailerId) +
-        "'><span class='label label-default'>Trailer</span></a>");
+        "'><span class='nr-label label-default'>Trailer</span></a>");
     return html;
 
 }
@@ -977,7 +989,7 @@ function getTrailerPlayerHtml(trailerId, klass) {
  * Helper function for escaping API urls
  */
 function escapeHTML(str) {
-    if (str === null) {
+    if (!str) {
         return str;
     }
     return str.replace(/[&"<>]/g, function(m) {
@@ -1013,51 +1025,52 @@ function deepCopy(object) {
     return $.extend(true, {}, object);
 }
 
+//poup select types
+var POPUP_INS_SEL = {
+    "rating": {
+        "movies.netflix.com": makeSelectObject(".midBob", "append", 800, {
+            "imdbClass": "imdb-wi",
+        }),
+        "dvd.netflix.com": makeSelectObject(".bobMovieRatings", "append", 800, {
+            "imdbClass": "dvd-popup",
+            "rtClass": "dvd-rt-icon",
+        }),
+    },
+    "trailer": {
+        "movies.netflix.com": makeSelectObject(".bobMovieHeader", "append", 800),
+        "dvd.netflix.com": {
+            "Movie": makeSelectObject(".bobMovieHeader", "append", 800),
+            "Search": makeSelectObject(".duration", "append", -1),
+        }
+    }
+};
+
+//search select types
+var SEARCH_SEL = {
+    "rating": makeSelectObject(".bluray", "append", -1, {
+        "imdbClass": "dvd-search-page",
+        "rtClass": "search-rt-icon",
+        "containerKlass": "nr-noop"
+    }),
+    "trailer": makeSelectObject(".synopsis", "before", 800, {
+        "trailerClass": "dvd-trailer-label",
+    }),
+};
+
+var MOVIE_SEL = {
+    "rating": makeSelectObject(".title", "append", -1, {
+        "imdbClass": "dvd-movie",
+        "rtClass": "dvd-rt-icon",
+    }),
+    "trailer": makeSelectObject(" > span:last", "append", -1, {
+        "trailerClass": "dvd-trailer-label",
+    }),
+};
+
 ///////// INIT /////////////
 self.port.on("pageMod", function(data) {
     CACHE = data.CACHE;
     countUser();
-
-    //poup select types
-    POPUP_INS_SEL = {
-        "rating": {
-            "movies.netflix.com": makeSelectObject(".midBob", "append", 800, {
-                "imdbClass": "imdb-wi",
-            }),
-            "dvd.netflix.com": makeSelectObject(".bobMovieRatings", "append", 800, {
-                "imdbClass": "dvd-popup",
-                "rtClass": "dvd-rt-icon",
-            }),
-        },
-        "trailer": {
-            "movies.netflix.com": makeSelectObject(".bobMovieHeader", "append", 800),
-            "dvd.netflix.com": {
-                "Movie": makeSelectObject(".bobMovieHeader", "append", 800),
-                "Search": makeSelectObject(".duration", "append", -1),
-            }
-        }
-    };
-
-    //search select types
-    SEARCH_SEL = {
-        "rating": makeSelectObject(".bluray", "append", -1, {
-            "imdbClass": "dvd-search-page",
-            "rtClass": "search-rt-icon",
-        }),
-        "trailer": makeSelectObject(".synopsis", "before", 800, {
-            "trailerClass": "dvd-trailer-label",
-        }),
-    };
-
-    MOVIE_SEL = {
-        "rating": makeSelectObject(".title", "append", -1, {
-            "imdbClass": "dvd-movie",
-            "rtClass": "dvd-rt-icon",
-        }),
-        "trailer": makeSelectObject(" > span:last", "append", -1, {
-            "trailerClass": "dvd-trailer-label",
-        }),
-    };
 
     if (isMoviePage()) {
         displayMovie();
